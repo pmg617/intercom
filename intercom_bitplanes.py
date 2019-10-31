@@ -12,8 +12,7 @@ class Intercom_bitplanes(Intercom_buffer):
 
     def init(self, args):
         Intercom_buffer.init(self, args)
-        self.intsize = 8
-        self.packet_format = f"HHH{self.frames_per_chunk // self.intsize}B"
+        self.packet_format = f"HHH{self.frames_per_chunk // 8}B"
         
 
     # chunk number, channel, bit
@@ -26,25 +25,15 @@ class Intercom_bitplanes(Intercom_buffer):
         def receive_and_buffer():
             message, source_address = self.receiving_sock.recvfrom(self.MAX_MESSAGE_SIZE) # Cojer mensaje de la red
             chunk_number, channel, bit, *data = struct.unpack(self.packet_format, message) # Extraer información
-            
-            print(type(data))
-            print(type(data[0]))
-            data2 = np.asarray(data, dtype=np.uint8)
-            print(type(data2))
-            print(type(data2[0]))
-            print(data2)
-            np.unpackbits(data2)
-            
-            self._buffer[chunk_number][:, channel] = self._buffer[chunk_number][:, channel] | (np.unpackbits(data).astype(int16) << bit) # Insertar bits en el buffer
+            bitplane = np.asarray(np.unpackbits(np.asarray(data, dtype=np.uint8)), dtype=np.uint16) # Desempaquetar bits
+            self._buffer[chunk_number % self.cells_in_buffer][:, channel] |= bitplane << bit # Insertar bits en el buffer
             return chunk_number
 
         def record_send_and_play(indata, outdata, frames, time, status):
             #División y envío de indata
-            for i in range(16):
+            for i in range(15, -1, -1): #iterar bits
                 for j in range(self.number_of_channels):
-                    #print(*np.packbits((indata[:,j] >> (15 - i)) & 1))
-                    bitsplane = np.packbits((indata[:,j] >> (15 - i)) & 1)
-                    message = struct.pack(self.packet_format, self.recorded_chunk_number, j, i, *np.packbits((indata[:,j] >> (15 - i)) & 1) ) # Empaquetar mensaje
+                    message = struct.pack(self.packet_format, self.recorded_chunk_number, j, i, *np.packbits((indata[:,j] >> i) & 1) ) # Empaquetar mensaje
                     self.sending_sock.sendto(message, (self.destination_IP_addr, self.destination_port)) # Enviar mensaje
             self.recorded_chunk_number = (self.recorded_chunk_number + 1) % self.MAX_CHUNK_NUMBER # Incrementar número de chunk gravado
                     
