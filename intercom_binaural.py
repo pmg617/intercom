@@ -22,7 +22,7 @@ class Intercom_binaural(Intercom_bitplanes):
         self.send(indata)
         self.recorded_chunk_number = (self.recorded_chunk_number + 1) % self.MAX_CHUNK_NUMBER
         chunk = self._buffer[self.played_chunk_number % self.cells_in_buffer]
-        chunk[:, 1] = np.add(chunk[:, 1], chunk[:, 0])              #al canal derecho se le suma el canal izquierdo, por lo que el resultado es que queda casi todo a 0(del derecho)
+        chunk[:, 1] = np.add(chunk[:, 1], chunk[:, 0])              #al canal derecho se le suma el canal izquierdo, por lo que el resultado es que queda como antes
         self._buffer[self.played_chunk_number % self.cells_in_buffer] = self.generate_zero_chunk()
         self.played_chunk_number = (self.played_chunk_number + 1) % self.cells_in_buffer
         outdata[:] = chunk
