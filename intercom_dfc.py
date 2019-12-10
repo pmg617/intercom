@@ -73,6 +73,12 @@ class Intercom_dfc(Intercom_binaural):
         return chunk
             
     def record_send_and_play_stereo(self, indata, outdata, frames, time, status):
+
+        for i in range(len(indata)):
+            for j in range(len(indata[i])):
+                pass#indata[i][j] = -4
+        print(indata)
+        
         indata[:,0] -= indata[:,1]
         self.update_sending_bps()
         self.cr(indata)
@@ -82,6 +88,11 @@ class Intercom_dfc(Intercom_binaural):
         self.decr_report()
         chunk = self.get_chunk()
         self.cr(chunk)
+
+        print(chunk)
+        print()
+        print()
+        
         outdata[:] = chunk
         if __debug__:
             sys.stderr.write("."); sys.stderr.flush()
