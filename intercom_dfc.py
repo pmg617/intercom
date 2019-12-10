@@ -21,6 +21,30 @@ class Intercom_dfc(Intercom_binaural):
         self.min_bps = self.number_of_channels * args.minimum_bitplanes
         self.max_incr = self.total_bps // 2
         self.increment = self.max_incr
+    
+    def cr(self, x): #change representation
+        #return
+        for i in range(len(x)):
+            for j in range(len(x[i])):
+                if x[i][j] >> 15:
+                    x[i][j] = 0x8000 - x[i][j]
+
+    def update_sending_bps(self):
+        if self.report_got < self.sending_bps:
+            self.sending_bps = self.report_got if self.report_got > self.min_bps else self.min_bps
+            self.increment = self.increment // 2 + 1
+        else:
+            more_bps = self.sending_bps + self.increment
+            self.sending_bps = more_bps if more_bps < self.total_bps else self.total_bps
+            self.increment = self.increment * 2 if self.increment < self.max_incr else self.max_incr
+
+        if __debug__:
+            print(self.sending_bps, self.report_got, self.increment)
+
+    def decr_report(self):
+        chunk_number = self.played_chunk_number % self.cells_in_buffer
+        self.report_total -= self.bps_received_chunk[chunk_number]
+        self.bps_received_chunk[chunk_number] = 0
         
     def buffer(self, chunk_number, bitplane_number, bitplane):
         bitplane = np.unpackbits(np.asarray(bitplane, dtype=np.uint8)).astype(np.int16)
@@ -34,11 +58,6 @@ class Intercom_dfc(Intercom_binaural):
         self.report_total += 1
         return self.buffer(chunk_number, bitplane_number, bitplane)
 
-    def decr_report(self):
-        chunk_number = self.played_chunk_number % self.cells_in_buffer
-        self.report_total -= self.bps_received_chunk[chunk_number]
-        self.bps_received_chunk[chunk_number] = 0
-
     def record_and_send(self, indata):        
         for bitplane_number in range(self.number_of_channels*16-1, -1 + self.total_bps - self.sending_bps , -1):
             bitplane = (indata[:, bitplane_number%self.number_of_channels] >> bitplane_number // self.number_of_channels) & 1
@@ -46,25 +65,6 @@ class Intercom_dfc(Intercom_binaural):
             message = struct.pack(self.packet_format, self.report_total // self.chunks_to_buffer, self.recorded_chunk_number, bitplane_number, *bitplane)
             self.sending_sock.sendto(message, (self.destination_IP_addr, self.destination_port))
         self.recorded_chunk_number = (self.recorded_chunk_number + 1) % self.MAX_CHUNK_NUMBER
-
-    def update_sending_bps(self):
-        if self.report_got < self.sending_bps:
-            self.sending_bps = self.report_got if self.report_got > self.min_bps else self.min_bps
-            self.increment = self.increment // 2 + 1
-        else:
-            more_bps = self.sending_bps + self.increment
-            self.sending_bps = more_bps if more_bps < self.total_bps else self.total_bps
-            self.increment = self.increment * 2 if self.increment < self.max_incr else self.max_incr
-
-        if __debug__:
-            print(self.sending_bps, self.report_got, self.increment)#s)
-    
-    def cr(self, x): #change representation
-        #return
-        for i in range(len(x)):
-            for j in range(len(x[i])):
-                if x[i][j] >> 15:
-                    x[i][j] = 0x8000 - x[i][j]
     
     def get_chunk(self):
         chunk = self._buffer[self.played_chunk_number]
@@ -73,11 +73,11 @@ class Intercom_dfc(Intercom_binaural):
         return chunk
             
     def record_send_and_play_stereo(self, indata, outdata, frames, time, status):
-            
         indata[:,0] -= indata[:,1]
         self.update_sending_bps()
         self.cr(indata)
         self.record_and_send(indata)
+        
         self._buffer[self.played_chunk_number][:,0] += self._buffer[self.played_chunk_number % self.cells_in_buffer][:,1]
         self.decr_report()
         chunk = self.get_chunk()
@@ -88,9 +88,15 @@ class Intercom_dfc(Intercom_binaural):
 
     def record_send_and_play(self, indata, outdata, frames, time, status):
         self.update_sending_bps()
+        self.cr(indata)
         self.record_and_send(indata)
+        
         self.decr_report()
-        self.play(outdata)
+        chunk = self.get_chunk()
+        self.cr(chunk)
+        outdata[:] = chunk
+        if __debug__:
+            sys.stderr.write("."); sys.stderr.flush()
 
     def add_args(self):
         parser = Intercom_binaural.add_args(self)
