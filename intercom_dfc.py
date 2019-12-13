@@ -20,7 +20,8 @@ class Intercom_dfc(Intercom_binaural):
         self.report_got = self.total_bps
         self.report_gottt = self.total_bps
         self.min_bps = self.number_of_channels * args.minimum_bitplanes
-        self.adapt_factor = 0.2
+        self.adapt_factor = args.adapt_factor
+            
     
     def cr(self, x): #change representation
         for i in range(len(x)):
@@ -95,6 +96,7 @@ class Intercom_dfc(Intercom_binaural):
     def add_args(self):
         parser = Intercom_binaural.add_args(self)
         parser.add_argument("-mb", "--minimum_bitplanes", help="Minium number of bitplanes per channel we are sending in case of slow conexion", type=int, default=2)
+        parser.add_argument("-af", "--adapt_factor", help="Decide how affected is by last report. Must be between 0 and 1.", type=float, default=0.2)
         return parser
 
 if __name__ == "__main__":
