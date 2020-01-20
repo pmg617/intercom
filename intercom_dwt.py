@@ -35,7 +35,7 @@ class Intercom_dwt():
         self.total_bps = 16 * self.number_of_channels
         self.bps_received_chunk = [self.total_bps] * self.cells_in_buffer
         self.packet_format = f"!BBHB{self.frames_per_chunk//8}B"
-        self.sending_bps = round(self.total_bps//2)
+        self.sending_bps = self.total_bps
         self.report = self.total_bps
         self.report_got = self.total_bps
         self.min_bps = self.number_of_channels * args.minimum_bitplanes
@@ -174,7 +174,7 @@ class Intercom_dwt():
     def add_args(self):
         parser = argparse.ArgumentParser(description="Real-time intercom", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
         parser.add_argument("-s", "--frames_per_chunk", help="Samples per chunk.", type=int, default=1024)
-        parser.add_argument("-r", "--frames_per_second", help="Sampling rate in frames/second.", type=int, default=44100)
+        parser.add_argument("-r", "--frames_per_second", help="Sampling rate in frames/second.", type=int, default=5000) #default=44100)
         parser.add_argument("-c", "--number_of_channels", help="Number of channels.", type=int, default=2)
         parser.add_argument("-p", "--mlp", help="My listening port.", type=int, default=4444)
         parser.add_argument("-i", "--ilp", help="Interlocutor's listening port.", type=int, default=4444)
