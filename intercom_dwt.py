@@ -156,7 +156,7 @@ class Intercom_dwt():
         chunk = self.get_chunk()
         self.up_report()
         self.cr(chunk)
-        self.recompose(chunk, coeff_slices, 1)
+        self.recompose(chunk, coeff_slices, 0)
         outdata[:] = chunk
         if __debug__:
             sys.stderr.write("."); sys.stderr.flush()
